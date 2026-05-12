@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Sakay Naga",
+    "slug": "sakay-naga",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "sakaynaga",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sakaynaga.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Sakay Naga uses your location to attach optional GPS context to crowding reports."
+      }
+    },
+    "android": {
+      "package": "com.sakaynaga.mobile",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "extra": {
+      "apiUrl": "http://localhost:3000/api/mobile"
+    }
+  }
+}

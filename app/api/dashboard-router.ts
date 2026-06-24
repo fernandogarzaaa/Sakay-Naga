@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createRouter, authedQuery, adminQuery } from "./middleware";
 import {
   getDashboardStats,
@@ -14,8 +15,16 @@ export const dashboardRouter = createRouter({
 
 export const driverRouter = createRouter({
   profile: authedQuery
-    .input(z.object({ userId: z.number() }))
-    .query(({ input }) => getDriverProfile(input.userId)),
+    .input(z.object({ userId: z.number().int().positive() }))
+    .query(({ ctx, input }) => {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "operator" && ctx.user.id !== input.userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only view your own driver profile.",
+        });
+      }
+      return getDriverProfile(input.userId);
+    }),
   register: authedQuery
     .input(z.object({
       licenseNumber: z.string().optional(),

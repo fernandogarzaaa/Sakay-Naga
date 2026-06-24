@@ -15,6 +15,10 @@
 - [x] Database migration for local auth added.
 - [x] EAS build configuration added for mobile preview builds.
 - [x] Beta runbook added.
+- [x] Production launch runbook added.
+- [x] Driver/operator authorization hardening added for trip and profile APIs.
+- [x] Trip/report domain validation added.
+- [x] High/critical production dependency audit findings remediated or documented.
 
 ## Required Before Public Beta Announcement
 
@@ -30,6 +34,7 @@
 - [ ] Publish Expo preview build or EAS beta build.
 - [ ] Configure production domain and HTTPS.
 - [ ] Add uptime monitoring against `/api/health`.
+- [ ] Run the production launch runbook in `docs/PRODUCTION_LAUNCH_RUNBOOK.md`.
 
 ## Known Beta Constraints
 

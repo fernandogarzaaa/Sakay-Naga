@@ -119,7 +119,45 @@ export async function findTripById(id: number) {
   return sanitizeForClient(row);
 }
 
+export async function findTripRecordById(id: number) {
+  return getDb().query.trips.findFirst({
+    where: eq(trips.id, id),
+  });
+}
+
+export async function findActiveTripByDriver(driverId: number) {
+  return getDb().query.trips.findFirst({
+    where: and(eq(trips.driverId, driverId), eq(trips.status, "active")),
+  });
+}
+
+export async function findActiveTripByJeepney(jeepneyId: number) {
+  return getDb().query.trips.findFirst({
+    where: and(eq(trips.jeepneyId, jeepneyId), eq(trips.status, "active")),
+  });
+}
+
+export async function validateTripStart(data: { driverId: number; jeepneyId: number; routeId: number }) {
+  const [route, jeepney, driverActiveTrip, jeepneyActiveTrip] = await Promise.all([
+    findRouteById(data.routeId),
+    findJeepneyById(data.jeepneyId),
+    findActiveTripByDriver(data.driverId),
+    findActiveTripByJeepney(data.jeepneyId),
+  ]);
+
+  if (!route || !route.isActive) return "Route is not available.";
+  if (!jeepney || !jeepney.isActive) return "Jeepney is not available.";
+  if (driverActiveTrip) return "Driver already has an active trip.";
+  if (jeepneyActiveTrip) return "Jeepney already has an active trip.";
+  return null;
+}
+
 export async function createTrip(data: { driverId: number; jeepneyId: number; routeId: number }) {
+  const validationError = await validateTripStart(data);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
   const [{ id }] = await getDb().insert(trips).values({
     ...data,
     status: "active",
@@ -128,7 +166,18 @@ export async function createTrip(data: { driverId: number; jeepneyId: number; ro
   return findTripById(id);
 }
 
-export async function endTrip(tripId: number) {
+export async function endTrip(tripId: number, driverId?: number) {
+  const existingTrip = await findTripRecordById(tripId);
+  if (!existingTrip) {
+    throw new Error("Trip not found.");
+  }
+  if (driverId && existingTrip.driverId !== driverId) {
+    throw new Error("You can only end your own trip.");
+  }
+  if (existingTrip.status !== "active") {
+    throw new Error("Trip is not active.");
+  }
+
   await getDb().update(trips).set({
     status: "completed",
     endTime: new Date(),
@@ -146,6 +195,37 @@ export async function createReport(data: {
   longitude?: string;
   notes?: string;
 }) {
+  const [route, jeepney, trip] = await Promise.all([
+    findRouteById(data.routeId),
+    findJeepneyById(data.jeepneyId),
+    data.tripId ? findTripRecordById(data.tripId) : Promise.resolve(undefined),
+  ]);
+
+  if (!route || !route.isActive) {
+    throw new Error("Route is not available.");
+  }
+  if (!jeepney || !jeepney.isActive) {
+    throw new Error("Jeepney is not available.");
+  }
+  if (data.tripId && !trip) {
+    throw new Error("Trip not found.");
+  }
+  if (trip && (trip.routeId !== data.routeId || trip.jeepneyId !== data.jeepneyId)) {
+    throw new Error("Trip does not match the selected route and jeepney.");
+  }
+  if (data.latitude !== undefined) {
+    const latitude = Number(data.latitude);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      throw new Error("Latitude must be between -90 and 90.");
+    }
+  }
+  if (data.longitude !== undefined) {
+    const longitude = Number(data.longitude);
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      throw new Error("Longitude must be between -180 and 180.");
+    }
+  }
+
   const [{ id }] = await getDb().insert(reports).values(data).$returningId();
   const row = await getDb().query.reports.findFirst({
     where: eq(reports.id, id),

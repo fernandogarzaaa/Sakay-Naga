@@ -33,19 +33,19 @@ const crowdingStatuses = [
 ] as const;
 
 const reportSchema = z.object({
-  jeepneyId: z.number().optional(),
+  jeepneyId: z.number().int().positive().optional(),
   jeepneyQr: z.string().optional(),
-  routeId: z.number(),
-  tripId: z.number().optional(),
+  routeId: z.number().int().positive(),
+  tripId: z.number().int().positive().optional(),
   status: z.enum(crowdingStatuses),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
   notes: z.string().max(500).optional(),
 });
 
 const startTripSchema = z.object({
-  jeepneyId: z.number(),
-  routeId: z.number(),
+  jeepneyId: z.number().int().positive(),
+  routeId: z.number().int().positive(),
 });
 
 const authSchema = z.object({
@@ -209,16 +209,21 @@ app.post("/reports", async (c) => {
     return c.json({ error: "A jeepney id or valid QR code is required" }, 400);
   }
 
-  const report = await createReport({
-    userId: user.id,
-    jeepneyId,
-    routeId: parsed.data.routeId,
-    tripId: parsed.data.tripId,
-    status: parsed.data.status,
-    latitude: parsed.data.latitude?.toString(),
-    longitude: parsed.data.longitude?.toString(),
-    notes: parsed.data.notes,
-  });
+  let report;
+  try {
+    report = await createReport({
+      userId: user.id,
+      jeepneyId,
+      routeId: parsed.data.routeId,
+      tripId: parsed.data.tripId,
+      status: parsed.data.status,
+      latitude: parsed.data.latitude?.toString(),
+      longitude: parsed.data.longitude?.toString(),
+      notes: parsed.data.notes,
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : "Unable to create report" }, 400);
+  }
 
   return c.json({ report: sanitizeForClient(report) }, 201);
 });
@@ -250,11 +255,16 @@ app.post("/driver/trips", async (c) => {
     return c.json({ error: "Invalid trip payload", details: parsed.error.flatten() }, 400);
   }
 
-  const trip = await createTrip({
-    driverId: user.id,
-    jeepneyId: parsed.data.jeepneyId,
-    routeId: parsed.data.routeId,
-  });
+  let trip;
+  try {
+    trip = await createTrip({
+      driverId: user.id,
+      jeepneyId: parsed.data.jeepneyId,
+      routeId: parsed.data.routeId,
+    });
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : "Unable to start trip" }, 400);
+  }
   return c.json({ trip: sanitizeForClient(trip) }, 201);
 });
 
@@ -272,7 +282,12 @@ app.post("/driver/trips/:id/end", async (c) => {
     return c.json({ error: "Invalid trip id" }, 400);
   }
 
-  const trip = await endTrip(tripId);
+  let trip;
+  try {
+    trip = await endTrip(tripId, user.role === "admin" ? undefined : user.id);
+  } catch (error) {
+    return c.json({ error: error instanceof Error ? error.message : "Unable to end trip" }, 400);
+  }
   return c.json({ trip: sanitizeForClient(trip) });
 });
 

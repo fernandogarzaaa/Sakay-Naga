@@ -46,7 +46,6 @@ export default function DriverPage() {
       return;
     }
     startTrip.mutate({
-      driverId: user.id,
       routeId: parseInt(selectedRoute),
       jeepneyId: parseInt(selectedJeepney),
     });

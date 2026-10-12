@@ -73,6 +73,11 @@ ADMIN_EMAIL=admin@example.com
 
 `ADMIN_EMAIL` is optional. If set, the first account registered with that email becomes `admin`.
 
+Optional security settings:
+
+- `TRUST_PROXY` — leave unset when the app is reached directly; proxy headers are then ignored and the TCP peer address is used for rate limiting. Set `cloudflare` behind Cloudflare (`cf-connecting-ip`) or `true` behind one reverse proxy (`x-real-ip`, else the right-most `x-forwarded-for` entry). Login/register (`/api/mobile/auth/*` and tRPC `auth.*`) are limited to 20 requests/min per client; other API calls to 180/min.
+- `SESSION_COOKIE_SAMESITE` — session cookies are `SameSite=Lax` by default. Set `none` only if the web front end is served from a different site than the API.
+
 ## Beta Release State
 
 See [BETA_RELEASE_CHECKLIST.md](BETA_RELEASE_CHECKLIST.md) for the remaining external work needed before announcing a public beta. The codebase now contains the web/backend app, the Expo mobile app, CI, Docker packaging, first-party auth, security middleware, and tests for the auth/security boundary.

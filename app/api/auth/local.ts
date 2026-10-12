@@ -1,4 +1,4 @@
-import * as cookie from "cookie";
+import { parseCookie, stringifySetCookie } from "cookie";
 import type { Context } from "hono";
 import { setCookie } from "hono/cookie";
 import { Session } from "@contracts/constants";
@@ -8,7 +8,7 @@ import { findUserById } from "../queries/users";
 import { signSessionToken, verifySessionToken } from "./session";
 
 export async function authenticateRequest(headers: Headers) {
-  const cookies = cookie.parse(headers.get("cookie") || "");
+  const cookies = parseCookie(headers.get("cookie") || "");
   const authHeader = headers.get("authorization") || "";
   const bearerToken = authHeader.toLowerCase().startsWith("bearer ")
     ? authHeader.slice("bearer ".length).trim()
@@ -42,7 +42,9 @@ export async function setSessionCookie(c: Context, userId: number) {
 export async function buildSessionCookie(headers: Headers, userId: number) {
   const token = await signSessionToken({ userId });
   const opts = getSessionCookieOptions(headers);
-  return cookie.serialize(Session.cookieName, token, {
+  return stringifySetCookie({
+    name: Session.cookieName,
+    value: token,
     httpOnly: opts.httpOnly,
     path: opts.path,
     sameSite: opts.sameSite?.toLowerCase() as "lax" | "none",
@@ -53,7 +55,9 @@ export async function buildSessionCookie(headers: Headers, userId: number) {
 
 export function buildExpiredSessionCookie(headers: Headers) {
   const opts = getSessionCookieOptions(headers);
-  return cookie.serialize(Session.cookieName, "", {
+  return stringifySetCookie({
+    name: Session.cookieName,
+    value: "",
     httpOnly: opts.httpOnly,
     path: opts.path,
     sameSite: opts.sameSite?.toLowerCase() as "lax" | "none",

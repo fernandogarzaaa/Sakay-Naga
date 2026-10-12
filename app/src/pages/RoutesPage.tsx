@@ -21,7 +21,13 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant="secondary" className={config.className}>{config.label}</Badge>;
 }
 
-type RouteSummary = NonNullable<ReturnType<typeof trpc.route.list.useQuery>["data"]>[number];
+type RouteSummary = {
+  id: number;
+  name: string;
+  origin: string;
+  destination: string;
+  color: string | null;
+};
 
 // One component per card so the crowding query is a top-level hook call.
 // Calling useQuery inside .map() broke the Rules of Hooks: the hook count

@@ -83,6 +83,7 @@ export default function ScanQRPage() {
 
       <div className="flex gap-2">
         <Input
+          aria-label="QR code"
           placeholder="Enter QR code (e.g. SKN-JEEP-001)"
           value={qrCode}
           onChange={(e) => setQrCode(e.target.value)}

@@ -1,7 +1,6 @@
 import {
   mysqlTable,
   mysqlEnum,
-  serial,
   varchar,
   text,
   timestamp,
@@ -13,8 +12,15 @@ import {
 } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
+// Primary keys are BIGINT UNSIGNED AUTO_INCREMENT. We avoid drizzle's `serial()`
+// because drizzle-kit emits `serial AUTO_INCREMENT`, which MariaDB rejects
+// (ER_PARSE_ERROR) and which, on MySQL 8, also adds a redundant UNIQUE index
+// next to the PRIMARY KEY (SERIAL implies UNIQUE). The column type and the
+// bigint unsigned foreign-key columns below are unchanged.
+const pk = () => bigint("id", { mode: "number", unsigned: true }).autoincrement().primaryKey();
+
 export const users = mysqlTable("users", {
-  id: serial("id").primaryKey(),
+  id: pk(),
   unionId: varchar("unionId", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 320 }),
@@ -38,7 +44,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 }));
 
 export const routes = mysqlTable("routes", {
-  id: serial("id").primaryKey(),
+  id: pk(),
   name: varchar("name", { length: 255 }).notNull(),
   code: varchar("code", { length: 50 }).notNull().unique(),
   description: text("description"),
@@ -63,7 +69,7 @@ export const routesRelations = relations(routes, ({ many }) => ({
 }));
 
 export const stops = mysqlTable("stops", {
-  id: serial("id").primaryKey(),
+  id: pk(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   latitude: decimal("latitude", { precision: 10, scale: 8 }).notNull(),
@@ -79,7 +85,7 @@ export const stopsRelations = relations(stops, ({ many }) => ({
 }));
 
 export const routeStops = mysqlTable("route_stops", {
-  id: serial("id").primaryKey(),
+  id: pk(),
   routeId: bigint("routeId", { mode: "number", unsigned: true }).notNull(),
   stopId: bigint("stopId", { mode: "number", unsigned: true }).notNull(),
   sequence: int("sequence").notNull(),
@@ -95,7 +101,7 @@ export const routeStopsRelations = relations(routeStops, ({ one }) => ({
 }));
 
 export const jeepneys = mysqlTable("jeepneys", {
-  id: serial("id").primaryKey(),
+  id: pk(),
   plateNumber: varchar("plateNumber", { length: 50 }).notNull().unique(),
   qrCode: varchar("qrCode", { length: 255 }).notNull().unique(),
   capacity: int("capacity").default(20).notNull(),
@@ -119,7 +125,7 @@ export const jeepneysRelations = relations(jeepneys, ({ many }) => ({
 }));
 
 export const driverProfiles = mysqlTable("driver_profiles", {
-  id: serial("id").primaryKey(),
+  id: pk(),
   userId: bigint("userId", { mode: "number", unsigned: true }).notNull().unique(),
   licenseNumber: varchar("licenseNumber", { length: 255 }),
   jeepneyId: bigint("jeepneyId", { mode: "number", unsigned: true }),
@@ -137,7 +143,7 @@ export const driverProfilesRelations = relations(driverProfiles, ({ one }) => ({
 }));
 
 export const trips = mysqlTable("trips", {
-  id: serial("id").primaryKey(),
+  id: pk(),
   driverId: bigint("driverId", { mode: "number", unsigned: true }).notNull(),
   jeepneyId: bigint("jeepneyId", { mode: "number", unsigned: true }).notNull(),
   routeId: bigint("routeId", { mode: "number", unsigned: true }).notNull(),
@@ -166,7 +172,7 @@ export const tripsRelations = relations(trips, ({ one, many }) => ({
 }));
 
 export const reports = mysqlTable("reports", {
-  id: serial("id").primaryKey(),
+  id: pk(),
   userId: bigint("userId", { mode: "number", unsigned: true }).notNull(),
   jeepneyId: bigint("jeepneyId", { mode: "number", unsigned: true }).notNull(),
   routeId: bigint("routeId", { mode: "number", unsigned: true }).notNull(),
@@ -193,7 +199,7 @@ export const reportsRelations = relations(reports, ({ one }) => ({
 }));
 
 export const notifications = mysqlTable("notifications", {
-  id: serial("id").primaryKey(),
+  id: pk(),
   userId: bigint("userId", { mode: "number", unsigned: true }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   body: text("body"),

@@ -25,6 +25,49 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  db-schema:
+    # Applies db/schema.ts to a real database with `drizzle-kit push`, so a
+    # schema that the server rejects is caught before deploy.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db: ["mysql:8.4", "mariadb:11"]
+    services:
+      db:
+        image: ${{ matrix.db }}
+        env:
+          MYSQL_ROOT_PASSWORD: ci
+          MYSQL_DATABASE: sakay
+          MARIADB_ROOT_PASSWORD: ci
+          MARIADB_DATABASE: sakay
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci || healthcheck.sh --connect"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    defaults:
+      run:
+        working-directory: app
+    env:
+      DATABASE_URL: mysql://root:ci@127.0.0.1:3306/sakay
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: drizzle-kit push (fresh database)
+        run: npx drizzle-kit push --force
+      - name: Insert smoke row (AUTO_INCREMENT primary key)
+        run: |
+          node -e "
+          const m=require('mysql2/promise');
+          (async()=>{const c=await m.createConnection(process.env.DATABASE_URL);
+          const [r]=await c.query(\"INSERT INTO routes (name,code,origin,destination) VALUES ('t','T-1','a','b')\");
+          if(!r.insertId) throw new Error('no insertId'); console.log('insertId',r.insertId); await c.end();})().catch(e=>{console.error(e);process.exit(1)})"
+
   mobile:
     runs-on: ubuntu-latest
     defaults:
